@@ -14,10 +14,9 @@ import (
 // 	respondWithJSON(w, http.StatusOK, databaseUserToUser(user))
 // }
 
-func (apiCfg *apiConfig) handlerCreateFeed(w http.ResponseWriter, r *http.Request, user database.User) {
+func (apiCfg *apiConfig) handlerCreateFeedFollow(w http.ResponseWriter, r *http.Request, user database.User) {
 	type parameters struct {
-		Name string `json:"name"`
-		Url  string `json:"url"`
+		FeedID uuid.UUID `json:"feed_id"`
 	}
 	decoder := json.NewDecoder(r.Body)
 
@@ -26,17 +25,12 @@ func (apiCfg *apiConfig) handlerCreateFeed(w http.ResponseWriter, r *http.Reques
 		respondWithError(w, http.StatusBadRequest, fmt.Sprintf("Error parsing JSON: %v", err))
 		return
 	}
-	if params.Name == "" {
-		respondWithError(w, http.StatusBadRequest, "Feed is required")
-		return
-	}
 
-	feed, err := apiCfg.DB.CreateFeed(r.Context(), database.CreateFeedParams{
+	feedFollow, err := apiCfg.DB.CreateFeedFollow(r.Context(), database.CreateFeedFollowParams{
 		ID:        uuid.New(),
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
-		Name:      params.Name,
-		Url:       params.Url,
+		FeedID:      params.FeedID,
 		UserID:    user.ID,
 	})
 
@@ -44,15 +38,15 @@ func (apiCfg *apiConfig) handlerCreateFeed(w http.ResponseWriter, r *http.Reques
 		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error creating feed: %v", err))
 		return
 	}
-	respondWithJSON(w, http.StatusCreated, databaseFeedToFeed(feed))
+	respondWithJSON(w, http.StatusCreated, databaseFeedFollowToFeedFollow(feedFollow))
 }
 
-func (apiCfg *apiConfig) handlerGetFeed(w http.ResponseWriter, r *http.Request) {
-	feeds, err := apiCfg.DB.GetFeeds(r.Context())
+func (apiCfg *apiConfig) handlerGetFeedFollow(w http.ResponseWriter, r *http.Request, user database.User) {
+	feedFollow, err := apiCfg.DB.GetFeedFollows(r.Context(), user.ID)
 
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Error loading feeds: %v", err))
 		return
 	}
-	respondWithJSON(w, http.StatusCreated, databaseFeedsToFeeds(feeds))
+	respondWithJSON(w, http.StatusCreated, databaseFeedFollowsToFeedFollows(feedFollow))
 }
