@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/back2basic/learning-go/01-rssagg/internal/database"
 	"github.com/go-chi/chi/v5"
@@ -20,6 +21,12 @@ type apiConfig struct {
 }
 
 func main() {
+	// feed, err := urlToFeed("https://www.wagslane.dev/index.xml")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Println(feed)
+
 	godotenv.Load()
 
 	portString := os.Getenv("PORT")
@@ -41,6 +48,11 @@ func main() {
 		DB: database.New(conn),
 	}
 
+	// Scraper
+	db := database.New(conn)
+	go startScraping(db, 10, time.Minute)
+
+	// Router
 	router := chi.NewRouter()
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins: []string{"https://*", "http://*"},
@@ -62,6 +74,7 @@ func main() {
 
 	v1Router.Post("/feed_follows", apiCfg.middlewareAuth(apiCfg.handlerCreateFeedFollow))
 	v1Router.Get("/feed_follows", apiCfg.middlewareAuth(apiCfg.handlerGetFeedFollow))
+	v1Router.Delete("/feed_follows/{feedFollowId}", apiCfg.middlewareAuth(apiCfg.handlerDeleteFeedFollow))
 
 	router.Mount("/v1", v1Router)
 
